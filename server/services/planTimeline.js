@@ -1,15 +1,17 @@
 import { embed } from "./embed.js";
 import { cosineSimilarity } from "./cosine.js";
-import { BROLLS } from "../data/broll.js";
 
-export async function planTimeline(translatedSegments) {
-  // Embed B-rolls once
-  for (const b of BROLLS) {
-    b.embedding = await embed(b.description);
-  }
+export async function planTimeline(translatedSegments, bRollsFromFrontend) {
+  /* Embed frontend B-rolls */
+  const brolls = await Promise.all(
+    bRollsFromFrontend.map(async (b) => ({
+      ...b,
+      embedding: await embed(b.metadata),
+    }))
+  );
 
   const insertions = [];
-  const usedBrollIds = new Set(); // 👈 NEW
+  const usedBrollIds = new Set();
   let lastInsertTime = -10;
 
   for (const seg of translatedSegments) {
@@ -20,11 +22,10 @@ export async function planTimeline(translatedSegments) {
     let best = null;
     let bestScore = 0;
 
-    for (const b of BROLLS) {
-      if (usedBrollIds.has(b.id)) continue; // 👈 NEW
+    for (const b of brolls) {
+      if (usedBrollIds.has(b.id)) continue;
 
       const score = cosineSimilarity(segEmbed, b.embedding);
-      console.log(score);
 
       if (score > bestScore) {
         bestScore = score;
@@ -33,21 +34,19 @@ export async function planTimeline(translatedSegments) {
     }
 
     if (best && bestScore > 0.3) {
-      // const startTime = seg.start_sec < 1.5 ? 1.5 : seg.start_sec;
+      const startTime = Math.max(1, seg.start_sec);
 
-const startTime = Math.max(1, seg.start_sec);
+      insertions.push({
+        start_sec: startTime,
+        duration_sec: Math.min(2.5, seg.end_sec - seg.start_sec),
+        broll_id: best.id,
+        confidence: Number(bestScore.toFixed(2)),
+        reason: `Matched visual context: ${best.metadata}`,
+        broll_URL:best.url,
+      });
 
-insertions.push({
-  start_sec: startTime,
-  duration_sec: Math.min(2.5, seg.end_sec - seg.start_sec),
-  broll_id: best.id,
-  confidence: Number(bestScore.toFixed(2)),
-  reason: `Matched visual context: ${best.description}`,
-});
-
-usedBrollIds.add(best.id);
-lastInsertTime = startTime;
-
+      usedBrollIds.add(best.id);
+      lastInsertTime = startTime;
     }
   }
 
