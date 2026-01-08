@@ -15,7 +15,7 @@ app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 
 /* Health check route to verify backend and API key */
-app.get("/health", (req, res) => {
+app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
     openai_key_loaded: !!process.env.OPENAI_API_KEY,

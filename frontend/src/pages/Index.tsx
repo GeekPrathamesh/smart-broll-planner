@@ -12,7 +12,7 @@ const Index = () => {
   useEffect(() => {
     const checkHealth = async () => {
       try {
-        const response = await fetch(`${BACKEND_URL}/health`);
+        const response = await fetch(`${BACKEND_URL}/api/health`);
         const data = await response.json();
         console.log("Backend health:", data);
 
