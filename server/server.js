@@ -2,9 +2,9 @@ import express from "express";
 import "dotenv/config";
 import cors from "cors";
 import { transcribeARoll } from "./services/transcribe.js";
-import { translateSegmentsBatch } from "./services/translatebatch.js";
 import { planTimeline } from "./services/planTimeline.js";
 import router from "./routes/generateVideorouter.js";
+import { translateSegmentsBatch } from "./services/translatebatch.js";
 
 const app = express();
 
