@@ -17,9 +17,9 @@ The system determines:
 The primary output is a structured timeline plan. Video rendering is included as an optional validation step.
 
 # Deployment
- - Frontend: To be added
+ - Frontend: https://broll-ai-planner.vercel.app
 
- - Backend API: To be added
+ - Backend API: https://smart-broll-planner1.onrender.com/health
 
 
 ## Technology Stack
