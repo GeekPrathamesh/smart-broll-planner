@@ -4,7 +4,7 @@ import cors from "cors";
 import { transcribeARoll } from "./services/transcribe.js";
 import { planTimeline } from "./services/planTimeline.js";
 import router from "./routes/generateVideorouter.js";
-import { translateSegmentsBatch } from "./services/translatebatch.js";
+import { translateSegmentsBatch } from "./services/translatetheBatch.js";
 
 const app = express();
 
