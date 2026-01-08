@@ -4,6 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/ModeToggle";
 import { BRollItem } from "@/components/BRollItem";
+import { toast } from "@/hooks/use-toast";
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
 
 const DEFAULT_AROLL = {
   url: "https://fzuudapb1wvjxbrr.public.blob.vercel-storage.com/food_quality_ugc/a_roll.mp4",
@@ -98,12 +102,19 @@ export function UploadCard() {
 
   /* ---------- Generate ---------- */
 
-  const handleGenerate = async () => {
-    if (!isValid) return;
+const handleGenerate = async () => {
+  if (!isValid) return;
 
-    setIsLoading(true);
+  setIsLoading(true);
 
-    const res = await fetch("http://localhost:3001/api/generate", {
+  /* Inform user generation has started */
+  toast({
+    title: "Generating Plan",
+    description: "Analyzing A-Roll and matching B-Rolls",
+  });
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -120,19 +131,53 @@ export function UploadCard() {
     });
 
     const data = await res.json();
-    const {timeline,transcript} = data;
+    const { timeline, transcript } = data;
 
-navigate("/results", {
-  state: {
-    timeline,
-    transcript,
-    aRollUrl: arollUrl,
+    /* Success feedback */
+    toast({
+      title: "Plan Generated",
+      description: "B-roll timeline created successfully",
+    });
+
+    navigate("/results", {
+      state: {
+        timeline,
+        transcript,
+        aRollUrl: arollUrl,
+      },
+    });
+
+  } catch (err) {
+    console.error(err);
+
+    /* Error feedback */
+    toast({
+      title: "Generation Failed",
+      description: "Unable to generate B-roll plan",
+      variant: "destructive",
+    });
+  } finally {
+    setIsLoading(false);
   }
-});
+};
+
+const handleModeChange = (newMode: "default" | "custom") => {
+  setMode(newMode);
+
+  if (newMode === "custom") {
+    setArollUrl("");
+    setArollMetadata("");
+    setBrollItems([]);
+  }
+
+  if (newMode === "default") {
+    setArollUrl(DEFAULT_AROLL.url);
+    setArollMetadata(DEFAULT_AROLL.metadata);
+    setBrollItems(DEFAULT_BROLL);
+  }
+};
 
 
-
-  };
 
   /* ---------- UI ---------- */
 
@@ -153,7 +198,7 @@ navigate("/results", {
 
       {/* Mode Toggle */}
       <div className="mb-8">
-        <ModeToggle mode={mode} onModeChange={setMode} />
+        <ModeToggle mode={mode} onModeChange={handleModeChange} />
       </div>
 
       {/* Default Mode */}
@@ -171,7 +216,7 @@ navigate("/results", {
             placeholder="A-Roll video URL"
             className="w-full px-4 py-3 rounded-xl border bg-muted/40"
           />
-<p>Optional description</p>
+          <p>Optional description</p>
           <textarea
             value={arollMetadata}
             onChange={(e) => setArollMetadata(e.target.value)}
@@ -185,7 +230,9 @@ navigate("/results", {
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Video className="w-5 h-5 text-primary" />
-            <h3 className="font-medium">B-Roll Clips</h3>
+            <h3 className="font-medium">
+              B-Roll Clips (Add detailed metadata to improve accuracy)
+            </h3>
           </div>
 
           <div className="space-y-3 max-h-[360px] overflow-y-auto pr-2">
@@ -196,9 +243,7 @@ navigate("/results", {
                 url={b.url}
                 description={b.description}
                 onUrlChange={(v) => updateBroll(b.id, "url", v)}
-                onDescriptionChange={(v) =>
-                  updateBroll(b.id, "description", v)
-                }
+                onDescriptionChange={(v) => updateBroll(b.id, "description", v)}
                 onRemove={() => removeBroll(b.id)}
               />
             ))}

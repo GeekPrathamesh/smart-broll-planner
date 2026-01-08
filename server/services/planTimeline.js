@@ -2,7 +2,7 @@ import { embed } from "./embed.js";
 import { cosineSimilarity } from "./cosine.js";
 
 export async function planTimeline(translatedSegments, bRollsFromFrontend) {
-  /* Embed frontend B-rolls */
+  /* Embed of frontend B-rolls by open ai key that mere pass hai */
   const brolls = await Promise.all(
     bRollsFromFrontend.map(async (b) => ({
       ...b,

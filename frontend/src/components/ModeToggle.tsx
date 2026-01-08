@@ -17,7 +17,9 @@ export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
             : "text-muted-foreground hover:text-foreground"
         )}
       >
-        Default
+        {`Default${mode === "default" ? " mode for assignment" : ""}`}
+
+
       </button>
       <button
         onClick={() => onModeChange("custom")}

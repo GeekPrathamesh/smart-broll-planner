@@ -4,41 +4,51 @@ import axios from "axios";
 import path from "path";
 import { spawn } from "child_process";
 import crypto from "crypto";
+import ffmpegPath from "ffmpeg-static";
 
 const router = express.Router();
 
-/* ---------- Utils ---------- */
-
+/* Temp folder where all job files will be stored */
 const TMP_ROOT = path.resolve(process.cwd(), "tmp");
 
 if (!fs.existsSync(TMP_ROOT)) {
   fs.mkdirSync(TMP_ROOT, { recursive: true });
 }
 
+/* Generates unique id for each video job */
 const uid = () => crypto.randomBytes(8).toString("hex");
 
+/* Runs FFmpeg command and waits until it finishes */
 const runFFmpeg = (args) =>
   new Promise((resolve, reject) => {
-    const ff = spawn("ffmpeg", args);
+    if (!ffmpegPath) {
+      return reject(new Error("FFmpeg binary not found"));
+    }
 
-    ff.stderr.on("data", (d) =>
-      console.log("FFmpeg:", d.toString())
-    );
+    const ff = spawn(ffmpegPath, args);
 
-    ff.on("close", (code) =>
-      code === 0
-        ? resolve()
-        : reject(new Error(`FFmpeg exited with ${code}`))
-    );
+    ff.stderr.on("data", (d) => {
+      console.log("FFmpeg:", d.toString());
+    });
+
+    ff.on("error", (err) => {
+      reject(new Error("FFmpeg failed to start: " + err.message));
+    });
+
+    ff.on("close", (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`FFmpeg exited with code ${code}`));
+    });
   });
 
+/* Downloads a video file and retries if it fails */
 const downloadFile = async (url, outputPath, retries = 3) => {
   try {
     const response = await axios({
       url,
       method: "GET",
       responseType: "stream",
-      timeout: 30_000, // 30s timeout
+      timeout: 30_000,
     });
 
     await new Promise((resolve, reject) => {
@@ -50,16 +60,14 @@ const downloadFile = async (url, outputPath, retries = 3) => {
 
   } catch (err) {
     if (retries > 0) {
-      console.warn(`⚠️ Retry downloading ${url} (${retries} left)`);
+      console.warn(`Retry downloading ${url} (${retries} left)`);
       return downloadFile(url, outputPath, retries - 1);
     }
     throw err;
   }
 };
 
-
-/* ---------- POST /api/video/create ---------- */
-
+/* API to generate final video with B-roll overlays */
 router.post("/create", async (req, res) => {
   const jobId = uid();
   const JOB_DIR = path.join(TMP_ROOT, jobId);
@@ -69,22 +77,18 @@ router.post("/create", async (req, res) => {
 
     const { insertions, a_roll_url } = req.body;
 
+    /* Validate required input */
     if (!a_roll_url || !insertions?.length) {
       return res.status(400).json({
         error: "a_roll_url or insertions missing",
       });
     }
 
-    /* ---------- Paths ---------- */
-
     const aRollPath = path.join(JOB_DIR, "a_roll.mp4");
     const outputPath = path.join(JOB_DIR, "final_output.mp4");
 
-    /* ---------- Download A-roll ---------- */
-
+    /* Download main A-roll video */
     await downloadFile(a_roll_url, aRollPath);
-
-    /* ---------- Prepare B-rolls ---------- */
 
     const brollPaths = [];
 
@@ -92,6 +96,7 @@ router.post("/create", async (req, res) => {
       const raw = path.join(JOB_DIR, `broll_${i}.mp4`);
       const cut = path.join(JOB_DIR, `broll_${i}_cut.mp4`);
 
+      /* Download and trim B-roll */
       await downloadFile(insertions[i].broll_URL, raw);
 
       await runFFmpeg([
@@ -105,8 +110,7 @@ router.post("/create", async (req, res) => {
       brollPaths.push(cut);
     }
 
-    /* ---------- Build Filter Graph ---------- */
-
+    /* Build FFmpeg overlay filter */
     let filterGraph = "";
     let lastVideo = "[0:v]";
 
@@ -127,10 +131,7 @@ router.post("/create", async (req, res) => {
 
     filterGraph = filterGraph.slice(0, -1);
 
-    console.log("✅ Filter Graph:\n", filterGraph);
-
-    /* ---------- Final Render ---------- */
-
+    /* Render final video keeping A-roll audio */
     await runFFmpeg([
       "-y",
       "-i", aRollPath,
@@ -149,15 +150,15 @@ router.post("/create", async (req, res) => {
       output: `tmp/${jobId}/final_output.mp4`,
     });
 
-    /* ---------- Cleanup after 1 min ---------- */
+    /* Cleanup temp files after some time */
     setTimeout(() => {
       fs.rmSync(JOB_DIR, { recursive: true, force: true });
-    }, 60_000);
-    console.log("done");
+    }, 120_000);
+
+    console.log("all done successfully..");
     
 
   } catch (err) {
-    console.error("❌ Video render error:", err);
     fs.rmSync(JOB_DIR, { recursive: true, force: true });
 
     res.status(500).json({

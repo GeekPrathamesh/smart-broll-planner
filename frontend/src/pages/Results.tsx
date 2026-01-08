@@ -4,6 +4,10 @@ import { Film, ArrowLeft, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TimelineCard } from "@/components/TimelineCard";
 import { TranscriptCard } from "@/components/TranscriptCard";
+import { toast } from "@/hooks/use-toast";
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
 
 const Results = () => {
   const location = useLocation();
@@ -25,6 +29,12 @@ const handleGenerateVideo = async () => {
   try {
     setIsGeneratingVideo(true);
 
+    /* Notify user that generation has started */
+    toast({
+      title: "Generating Video",
+      description: "B-rolls are being inserted. Please wait.",
+    });
+
     const payload = {
       a_roll_url: aRollUrl,
       insertions: timeline.insertions.map(i => ({
@@ -34,7 +44,7 @@ const handleGenerateVideo = async () => {
       }))
     };
 
-    const res = await fetch("http://localhost:3001/api/video/create", {
+    const res = await fetch(`${BACKEND_URL}/api/video/create`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -46,17 +56,29 @@ const handleGenerateVideo = async () => {
       throw new Error(data.error || "Video generation failed");
     }
 
-    // Backend returns local path → expose it via static route
-    setVideoUrl(`http://localhost:3001/${data.output}`);
+
+    setVideoUrl(`${BACKEND_URL}/${data.output}`);
+
+    /* Notify success */
+    toast({
+      title: "Video Ready",
+      description: "Your final video has been generated successfully.",
+    });
 
   } catch (err) {
-  console.error(err);
-  alert(err.message);
-}
- finally {
+    console.error(err);
+
+    /* Notify error */
+    toast({
+      title: "Generation Failed",
+      description: err.message || "Something went wrong",
+      variant: "destructive",
+    });
+  } finally {
     setIsGeneratingVideo(false);
   }
 };
+
 
 
   return (
