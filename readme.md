@@ -174,16 +174,6 @@ http://localhost:8080
 - **`GET /tmp/*`**  
   Serves generated video files for preview or download.
 
-# Deployment
-
-The backend is deployed on **AWS EC2** and successfully handles transcription, semantic analysis, and **B-roll insertion planning**, allowing users to generate and view B-roll insertion timelines online.
-
-Due to **AWS server resource limitations**, final video generation using **FFmpeg** is not available on the deployed server. Video rendering is CPU-intensive and is therefore executed **locally** on a development machine.
-
-**users can generate B-roll insertions, but not the final rendered video.**
-The frontend is deployed on **Vercel** and is publicly accessible at:  
-https://broll-ai-planner.vercel.app
-
 
 ## Video Rendering Details
  - B-roll clips are trimmed to planned durations
