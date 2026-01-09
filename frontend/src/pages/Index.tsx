@@ -47,26 +47,46 @@ const Index = () => {
       
       <div className="relative">
         {/* Header */}
-        <header className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-50">
-          <div className="container flex items-center justify-between h-16 px-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-primary/10">
-                <Film className="w-5 h-5 text-primary" />
-              </div>
-              <span className="font-semibold text-foreground">
-                B-Roll Planner
-              </span>
-            </div>
+       <header className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-6xl">
+  <div
+    className="
+      relative
+      flex items-center justify-between
+      h-16 px-6
+      rounded-2xl
+      border border-border/40
+      bg-background/70
+      backdrop-blur-xl
+      shadow-lg shadow-black/5
+      transition-all duration-300
+      hover:shadow-xl hover:shadow-black/10
+    "
+  >
+    {/* Logo */}
+    <div className="flex items-center gap-3 group">
+      <div className="p-2 rounded-xl bg-primary/10 transition-transform duration-300 group-hover:scale-110">
+        <Film className="w-5 h-5 text-primary" />
+      </div>
+      <span className="font-semibold text-foreground tracking-tight">
+        B-Roll Planner
+      </span>
+    </div>
 
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              {health}
-            </div>
-          </div>
-        </header>
+    {/* Status */}
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <span className="relative flex h-2.5 w-2.5">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500/60" />
+        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500" />
+      </span>
+      <span className="font-medium">{health}</span>
+    </div>
+  </div>
+  
+</header>
+
 
         {/* Main Content */}
-        <main className="container px-6 py-10 lg:py-15">
+        <main className="container md:px-6 px-4 pt-28 lg:py-15">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12 animate-fade-in">
               <h1 className="text-3xl lg:text-4xl font-bold text-foreground mb-4 tracking-tight">

@@ -182,7 +182,7 @@ const handleModeChange = (newMode: "default" | "custom") => {
   /* ---------- UI ---------- */
 
   return (
-    <div className="glass-card-glow p-8 max-w-6xl w-full">
+    <div className="glass-card-glow lg:p-8 p-4 max-w-6xl w-full">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <div className="p-3 rounded-xl bg-primary/10">
