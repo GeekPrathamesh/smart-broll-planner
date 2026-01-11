@@ -1,8 +1,11 @@
 import { embed } from "./embed.js";
 import { cosineSimilarity } from "./cosine.js";
 
+const MIN_SEGMENT = 2.50;
+const MAX_BROLL = 4.0;
+const MIN_GAP = 0.2;
+
 export async function planTimeline(translatedSegments, bRollsFromFrontend) {
-  /* Embed of frontend B-rolls by open ai key that mere pass hai */
   const brolls = await Promise.all(
     bRollsFromFrontend.map(async (b) => ({
       ...b,
@@ -12,10 +15,25 @@ export async function planTimeline(translatedSegments, bRollsFromFrontend) {
 
   const insertions = [];
   const usedBrollIds = new Set();
-  let lastInsertTime = -10;
+  let lastEndTime = -Infinity;
 
   for (const seg of translatedSegments) {
-    if (seg.start_sec - lastInsertTime < 3) continue;
+    const segDuration = seg.end_sec - seg.start_sec;
+
+    // Rule 1: Segment must be long enough
+    if (segDuration < MIN_SEGMENT) continue;
+
+    const rawStart = seg.start_sec;
+    const startTime = (rawStart < 1 ? 1 : rawStart) + 0.12;
+
+    const maxPossible = seg.end_sec - startTime;
+    if (maxPossible < MIN_SEGMENT) continue;
+
+    const duration = Math.min(MAX_BROLL, maxPossible);
+    const endTime = startTime + duration;
+
+    // No overlap
+    if (startTime < lastEndTime + MIN_GAP) continue;
 
     const segEmbed = await embed(seg.translated_text);
 
@@ -26,6 +44,8 @@ export async function planTimeline(translatedSegments, bRollsFromFrontend) {
       if (usedBrollIds.has(b.id)) continue;
 
       const score = cosineSimilarity(segEmbed, b.embedding);
+      console.log(score);
+      
 
       if (score > bestScore) {
         bestScore = score;
@@ -33,21 +53,21 @@ export async function planTimeline(translatedSegments, bRollsFromFrontend) {
       }
     }
 
-    if (best && bestScore > 0.3) {
-      const startTime = Math.max(1, seg.start_sec);
+    // Rule 3: Semantic confidence threshold
+    if (!best || bestScore < 0.30) continue;
 
-      insertions.push({
-        start_sec: startTime,
-        duration_sec: Math.min(2.5, seg.end_sec - seg.start_sec),
-        broll_id: best.id,
-        confidence: Number(bestScore.toFixed(2)),
-        reason: `Matched visual context: ${best.metadata}`,
-        broll_URL:best.url,
-      });
+    insertions.push({
+      start_sec: Number(startTime.toFixed(2)),
+      end_sec: Number(endTime.toFixed(2)),
+      duration_sec: Number(duration.toFixed(2)),
+      broll_id: best.id,
+      broll_URL: best.url,
+      confidence: Number(bestScore.toFixed(2)),
+      reason: `Matched visual context: ${best.metadata}`,
+    });
 
-      usedBrollIds.add(best.id);
-      lastInsertTime = startTime;
-    }
+    usedBrollIds.add(best.id);
+    lastEndTime = endTime;
   }
 
   return { insertions };

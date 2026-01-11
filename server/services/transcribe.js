@@ -4,6 +4,8 @@ import axios from "axios";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from "ffmpeg-static";
 import OpenAI from "openai";
+import crypto from "crypto";
+
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 
@@ -12,11 +14,13 @@ const openai = new OpenAI({
 });
 
 export async function transcribeARoll(videoUrl) {
-  const tmpDir = path.join(process.cwd(), "tmp");
-  if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+  const jobId = crypto.randomBytes(8).toString("hex");
+  const jobDir = path.join(process.cwd(), "tmp", jobId);
+  fs.mkdirSync(jobDir, { recursive: true });
 
-  const videoPath = path.join(tmpDir, "a_roll.mp4");
-  const audioPath = path.join(tmpDir, "a_roll.wav");
+  const videoPath = path.join(jobDir, "a_roll.mp4");
+  const audioPath = path.join(jobDir, "a_roll.wav");
+
 
   // Download video
   const videoRes = await axios.get(videoUrl, { responseType: "stream" });
@@ -41,7 +45,16 @@ export async function transcribeARoll(videoUrl) {
     file: fs.createReadStream(audioPath),
     model: "whisper-1",
     response_format: "verbose_json",
+    prompt: "This is a clear spoken narration.",
   });
+
+    // Auto cleanup after 2 minutes
+  setTimeout(() => {
+    fs.rmSync(jobDir, { recursive: true, force: true });
+    console.log("Whisper job cleaned:", jobId);
+  }, 120000);
+
+  return transcript;
 
   return transcript;
 }
