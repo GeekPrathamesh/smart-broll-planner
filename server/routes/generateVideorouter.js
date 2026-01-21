@@ -105,7 +105,7 @@ router.post("/create", async (req, res) => {
     setTimeout(() => {
       fs.rmSync(JOB_DIR, { recursive: true, force: true });
       console.log("Job cleaned:", jobId);
-    }, 120000);
+    }, 240000);
 
   } catch (err) {
     if (fs.existsSync(JOB_DIR)) fs.rmSync(JOB_DIR, { recursive: true, force: true });

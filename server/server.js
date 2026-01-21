@@ -50,14 +50,13 @@ app.post("/api/generate", async (req, res) => {
 
     console.log("extracted mp3 from mp4 successfully & converted to transcript successfully..");
 
-    const segments = transcript.segments.map((s) => ({
-      text: s.text,
-      start_sec: s.start,
-      end_sec: s.end,
-    }));
+
+
+
+
 
     /* Translate transcript into English */
-    const translatedSegments = await translateSegmentsBatch(segments);
+    const translatedSegments = await translateSegmentsBatch(transcript.segments);
 
     console.log("transcript language converted to english successfully..");
 

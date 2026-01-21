@@ -54,7 +54,7 @@ export async function planTimeline(translatedSegments, bRollsFromFrontend) {
     }
 
     // Rule 3: Semantic confidence threshold
-    if (!best || bestScore < 0.30) continue;
+    if (!best || bestScore < 0.25) continue;
 
     insertions.push({
       start_sec: Number(startTime.toFixed(2)),

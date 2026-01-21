@@ -26,6 +26,21 @@ export function TimelineCard({ data }: TimelineCardProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleExportJSON = () => {
+  const blob = new Blob([JSON.stringify(data, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "broll_timeline.json";
+  a.click();
+
+  URL.revokeObjectURL(url);
+};
+
+
   return (
     <div className="glass-card p-6 h-full animate-fade-in">
       {/* Header */}
@@ -39,7 +54,7 @@ export function TimelineCard({ data }: TimelineCardProps) {
             <p className="text-sm text-muted-foreground">{data.totalInsertions} insertions · {data.totalDuration}</p>
           </div>
         </div>
-        
+        <div className="flex items-center gap-1">
         <Button
           variant="glass"
           size="sm"
@@ -58,6 +73,14 @@ export function TimelineCard({ data }: TimelineCardProps) {
             </>
           )}
         </Button>
+        <Button
+          variant="glass"
+          size="sm"
+          onClick={handleExportJSON}
+          className="gap-2"
+        >
+         Export
+        </Button></div>
       </div>
 
       {/* Code Window */}

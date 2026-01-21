@@ -3,15 +3,12 @@ import path from "path";
 import axios from "axios";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from "ffmpeg-static";
-import OpenAI from "openai";
 import crypto from "crypto";
-
+import { buildSegments } from "../buildSegments.js";
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const GOOGLE_API_KEY = process.env.GOOGLE_SPEECH_API_KEY;
 
 export async function transcribeARoll(videoUrl) {
   const jobId = crypto.randomBytes(8).toString("hex");
@@ -21,14 +18,11 @@ export async function transcribeARoll(videoUrl) {
   const videoPath = path.join(jobDir, "a_roll.mp4");
   const audioPath = path.join(jobDir, "a_roll.wav");
 
-
-  // Download video
   const videoRes = await axios.get(videoUrl, { responseType: "stream" });
   await new Promise(resolve => {
     videoRes.data.pipe(fs.createWriteStream(videoPath)).on("finish", resolve);
   });
 
-  // Extract audio
   await new Promise((resolve, reject) => {
     ffmpeg(videoPath)
       .noVideo()
@@ -40,21 +34,43 @@ export async function transcribeARoll(videoUrl) {
       .on("error", reject);
   });
 
-  // ✅ Whisper transcription with timestamps
-  const transcript = await openai.audio.transcriptions.create({
-    file: fs.createReadStream(audioPath),
-    model: "whisper-1",
-    response_format: "verbose_json",
-    prompt: "This is a clear spoken narration.",
+  const audioBytes = fs.readFileSync(audioPath).toString("base64");
+
+  const res = await axios.post(
+    `https://speech.googleapis.com/v1/speech:recognize?key=${GOOGLE_API_KEY}`,
+    {
+      config: {
+        encoding: "LINEAR16",
+        sampleRateHertz: 16000,
+        languageCode: "hi-IN",
+        enableWordTimeOffsets: true,
+        enableAutomaticPunctuation: true
+      },
+      audio: { content: audioBytes }
+    }
+  );
+
+  let allSegments = [];
+
+  res.data.results.forEach(r => {
+    const alt = r.alternatives[0];
+    const segments = buildSegments(alt.words, alt.transcript);
+    allSegments.push(...segments);
   });
 
-    // Auto cleanup after 2 minutes
+  // Convert to required format
+  const formattedSegments = allSegments.map(s => ({
+    text: s.text,
+    start_sec: s.start,
+    end_sec: s.end
+  }));
+
   setTimeout(() => {
     fs.rmSync(jobDir, { recursive: true, force: true });
-    console.log("Whisper job cleaned:", jobId);
-  }, 120000);
+  }, 60000);
 
-  return transcript;
-
-  return transcript;
+  return {
+    segments: formattedSegments
+  };
 }
+
